@@ -1,0 +1,108 @@
+---
+slug: dragDir
+title: 拖拽获取文件夹下的所有文件
+authors: jonben
+tags: [javascript]
+---
+
+import DragDirectory from './index.js'
+
+## 1. 首先我们来认识一下关于文件的一些api
+
+（以下内容引用至MDN）
+
+### [DataTransferItem.webkitGetAsEntry()](https://developer.mozilla.org/zh-CN/docs/Web/API/DataTransferItem/webkitGetAsEntry)
+
+如果由文件描述的项目DataTransferItem是文件，则webkitGetAsEntry()返回FileSystemFileEntry或FileSystemDirectoryEntry表示它。如果该项不是文件，null则返回。
+
+### [FileSystemFileEntry](https://developer.mozilla.org/zh-CN/docs/Web/API/FileSystemFileEntry)
+
+文件系统 API 的 FileSystemFileEntry 接口表示文件系统中的文件。它提供了属性，描述文件的属性，以及 file() (en-US) 方法，它创建了可以用于读取文件的 File 对象。
+
+### [FileSystemDirectoryEntry](https://developer.mozilla.org/zh-CN/docs/Web/API/FileSystemDirectoryEntry)
+
+文件和目录条目 API 的 FileSystemDirectoryEntry 接口表示文件系统中的目录。它提供了方法，使其能够访问和操作目录中的文件，以及访问目录中的条目。
+
+## 2. 接下来我们编写代码
+
+```html
+<div id="area"></div>
+```
+```css
+ #area {
+    width: 200px;
+    height: 200px;
+    border: 1px solid red;
+  }
+```
+```js
+const area = document.getElementById('area');
+
+area.ondragover = (e) => {
+  e.preventDefault();
+};
+
+area.ondragleave = (e) => {
+  e.preventDefault();
+};
+
+area.ondrop = function(evt) {
+  evt.preventDefault();
+  evt.stopPropagation();
+  const items = evt.dataTransfer.items;
+  if (items.length > 1) {
+    return console.log("一次只允许上传一个文件夹");
+  }
+  const item = items[0].webkitGetAsEntry();
+  if (item && item.isDirectory) {
+    traverseFileTree(item).then(res => {
+      console.log(res);
+    });
+  }
+}
+
+// 分析文件夹下的文件
+function traverseFileTree(item) {
+  return new Promise((resolve, reject) => {
+    let res = [];
+    let timer;
+    const internalProces = (item, path, res) => {
+      if (item.isFile) {
+        item.file(file => {
+          file.path = path + file.name;
+          const newFile = new File([file], file.path, { type: file.type });
+          res.push(newFile);
+          timer = setTimeout(() => {
+            resolve(res);
+          }, 600);
+        });
+      } else if (item.isDirectory) {
+        clearTimeout(timer);
+        const dirReader = item.createReader();
+        dirReader.readEntries(entries => {
+          for (let i = 0; i < entries.length; i++) {
+            internalProces(entries[i], path + item.name + "/", res);
+          }
+        }, (error) => reject(error));
+      }
+    };
+    internalProces(item, "", res);
+  })
+}
+```
+
+## 试一试吧
+<DragDirectory />
+
+## 3. 当然我们可以利用input的原生事件来获取文件夹内的内容
+
+```html
+<input type="file" webkitdirectory id="ipt"/>
+```
+
+```js
+const ipt = document.getElementById('ipt')
+ipt.onchange = function(e) {
+  console.log(ipt.files);
+}
+```
