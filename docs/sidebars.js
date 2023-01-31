@@ -67,13 +67,12 @@ const sidebars = {
         'svg/bezier'
       ]
     },
-    {
-      type: 'category',
-      label: '设计模式',
-      items: [
-        'designMod/fs/index'
-      ]
-    },
+    // {
+    //   type: 'category',
+    //   label: '设计模式',
+    //   items: [
+    //   ]
+    // },
     {
       type: 'category',
       label: 'react',

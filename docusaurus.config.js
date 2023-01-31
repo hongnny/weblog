@@ -7,7 +7,7 @@ const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 const url = 'https://jonbenery.github.io';
 const homePage = 'https://github.com/jonbenery/weblog';
 
-const pagePlugins = ['openApi']
+const pagePlugins = ['openApi', 'computer']
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
@@ -103,6 +103,11 @@ const config = {
           {
             to:'/blog',
             label: '博客', 
+            position: 'left'
+          },
+          {
+            to:'/computer',
+            label: '计算机基础', 
             position: 'left'
           },
           {
