@@ -1,0 +1,196 @@
+---
+slug: eventLoop
+title: 时间循环-宏任务和微任务
+authors: jonben
+tags: [javascript]
+---
+import { RenderImg } from '@site/src/common'
+
+## 1. 什么是事件循环
+
+在了解事件循环前，需要一些有关JS特性的前置知识。
+
+JS引擎是单线程的，直白来说就是一个时间点下JS引擎只能去做一件事情，而Java这种多线程语言，可以同时做几件事情。
+
+JS做的任务分为同步和异步两种，所谓 "异步"，简单说就是一个任务不是连续完成的，先执行第一段，等做好了准备，再回过头执行第二段，第二段也被叫做回调；同步则是连贯完成的。
+像读取文件、网络请求这种任务属于异步任务：花费时间很长，但中间的操作不需要JS引擎自己完成，它只用等别人准备好了，把数据给他，他再继续执行回调部分。
+
+如果没有特殊处理，JS引擎在执行异步任务时，应该是存在等待的，不去做任何其他事情。用一个图来展示这个过程，可以看出，在执行异步任务时有大量的空闲时间被浪费。
+
+<RenderImg 
+  src={require('./img/thread.png')}
+  text='大部分语言的线程'
+  />
+
+实际上这是大多数多线程语言的处理办法。但对于JS这种单线程语言来说，这种长时间的空闲等待是不可接受的：遇到其他紧急任务，Java可以再开一个线程去处理，JS却只能忙等。
+
+
+所以采取了以下的“异步任务回调通知”模式：
+
+<RenderImg 
+  src={require('./img/js-thread.png')}
+  text='js线程'
+/>
+
+在等待异步任务准备的同时，JS引擎去执行其他同步任务，等到异步任务准备好了，再去执行回调。这种模式的优势显而易见，完成相同的任务，花费的时间大大减少，这种方式也被叫做非阻塞式。
+
+而实现这个“通知”的，正是事件循环，把异步任务的回调部分交给事件循环，等时机合适交还给JS线程执行。事件循环并不是JavaScript首创的，它是计算机的一种运行机制。
+
+事件循环是由一个队列组成的，异步任务的回调遵循先进先出，在JS引擎空闲时会一轮一轮地被取出，所以被叫做循环。
+
+根据队列中任务的不同，分为宏任务和微任务，宏任务（macroTask）和微任务（microTask），都是JavaScript中异步中的一些概念。
+
+
+
+<RenderImg
+  src={require('./img/eventloop1.png')}
+  title="事件循环"
+  />
+
+首先我们知道，`js`是单线程了，按照顺序一行一行执行，如果某行报错则停止后续执行，然后就是先执行同步，再执行异步，看图，我们会将同步代码一行一行放入`Call Stack`中执行，遇到异步，就会移动到`Web APIs`中记录下来，等待时机，如果时机到了，将其移动到`Callback Queue`中，如果同步代码执行完，也就是`Call Stack为`空，再触发`Event Loop`机制，`Event Loop`开始工作，轮询查找`Callback Queue`，如果有就移动到`Call Stack`中执行
+
+### 首先我们来看`setTimeout`
+
+<RenderImg
+  src={require('./img/eventloop2.png')}
+  title="事件循环-setTimeout"
+  />
+
+根据事件循环的机制最终将`setTimeout`从`Call Stack`中移入到`Callback Queue`中，然后按照图中顺序执行`1，2，3`；
+
+### 其次是`Promise.then`：
+
+<RenderImg
+  src={require('./img/eventloop3.png')}
+  title="事件循环-Promise.then"
+  />
+
+`Promise`是`ES6`规范的，不是`W3C`规范的所以不经过`Web APIs`，此外与宏任务不同的一点是，有自己独特的`micro task queue`，这是为什么呢？
+
+* 微任务是ES6语法规定的
+* 宏任务是由浏览器规定的 规定的地方不一样导致存放位置的不一样，所以才有了图中存放位置的不同。
+
+### 所以最终我们的`EventLoop`应该是这样：
+
+<RenderImg
+  src={require('./img/eventloop4.png')}
+  />
+
+
+
+
+
+## 2. 宏任务和微任务
+
+### 宏任务
+（macro）task，可以理解是每次执行栈执行的代码就是一个宏任务（包括每次从事件队列中获取一个事件回调并放到执行栈中执行）。
+
+宏任务一般是：** script、setTimeout、setInterval、postMessage、MessageChannel、setImmediate(Node.js 环境) **
+
+### 微任务
+microtask,可以理解是在当前 task 执行结束后立即执行的任务。也就是说，在当前task任务后，下一个task之前，在渲染之前。
+所以它的响应速度相比setTimeout（setTimeout是task）会更快，因为无需等渲染。也就是说，在某一个macrotask执行完后，就会将在它执行期间产生的所有microtask都执行完毕（在渲染前）。
+
+微任务一般是：** Promise.then、Object.observe、MutationObserver、process.nextTick(Node.js 环境) **
+
+
+### 执行顺序
+
+** 异步跟出场顺序有关系，不同类型的异步（宏任务和微任务）跟出场顺序就没关系了 **
+
+先执行同步代码，遇到异步宏任务则将异步宏任务放入宏任务队列中，遇到异步微任务则将异步微任务放入微任务队列中，当所有同步代码执行完毕后，再将异步微任务从队列中调入主线程执行，微任务执行完毕后再将异步宏任务从队列中调入主线程执行，一直循环直至所有任务执行完毕。
+
+这里容易产生一个错误的认识：就是微任务先于宏任务执行。实际上是先执行同步任务然后在执行异步任务，异步任务是分宏任务和微任务两种的。
+
+
+### 案例1
+```js
+console.log(100)
+setTimeout(()=>{
+    console.log(200)
+})
+Promise.resolve().then(()=>{
+    console.log(300)
+})
+console.log(400)
+// 答案为： 100 400 300 200
+```
+分析：
+
+1. 执行同步任务`console.log(100)`输出`100`
+2. 遇到`setTimeout`异步宏任务，放入宏任务队列中
+3. `Promise.then`，异步微任务，将其放入微任务队列中
+4. 执行同步任务`console.log(400)`输出`400`，主线程中同步任务执行完
+5. 从微任务队列中取出任务到主线程中，输出`300`，微任务队列为空
+6. 从宏任务队列中取出任务到主线程中，输出`200`，宏任务队列为空
+
+### 案例2
+```js
+setTimeout(function(){
+    console.log(1);
+});
+new Promise(function(resolve){		    
+    console.log(2);
+    resolve();
+}).then(function(){		    
+    console.log(3);
+}).then(function(){
+    console.log(4)
+}); 		
+console.log(5);
+// 2 5 3 4 1
+```
+
+分析：
+
+1. 遇到`setTimout`，异步宏任务，放入宏任务队列中
+2. 遇到`new Promise，new Promise`在实例化的过程中所执行的代码都是同步进行的，所以输出`2`
+3. `Promise.then`，异步微任务，将其放入微任务队列中
+4. 遇到同步任务`console.log(5)`;输出`5`；主线程中同步任务执行完
+5. 从微任务队列中取出任务到主线程中，输出`3、 4`，微任务队列为空
+6. 从宏任务队列中取出任务到主线程中，输出`1`，宏任务队列为空
+
+### 案例3
+```js
+setTimeout(()=>{
+    new Promise(resolve =>{
+        resolve();
+    }).then(()=>{
+        console.log('test');
+    });
+    console.log(4);
+});
+new Promise(resolve => {
+    resolve();
+    console.log(1)
+}).then( () => {
+    console.log(3);
+    Promise.resolve().then(() => {
+        console.log('before timeout');
+    }).then(() => {
+        Promise.resolve().then(() => {
+          console.log('also before timeout')
+        })
+    })
+})
+console.log(2);
+//1，2，3，before timeout，also before timeout，4，test;
+```
+分析：
+
+1. 遇到`setTimeout`，异步宏任务，将`() => {console.log(4)}`放入宏任务队列中；
+2. 遇到`new Promise，new Promise`在实例化的过程中所执行的代码都是同步进行的，所以输出`1`；
+3. 而`Promise.then`，异步微任务，将其放入微任务队列中
+4. 遇到同步任务`console.log(2)`，输出`2`；主线程中同步任务执行完
+5. 从微任务队列中取出任务到主线程中，输出`3`，此微任务中又有微任务，`Promise.resolve().then(微任务a).then(微任务b)`，将其依次放入微任务队列中；
+6. 从微任务队列中取出任务`a`到主线程中，输出 `before timeout`；
+7. 从微任务队列中取出任务`b`到主线程中，任务`b`又注册了一个微任务`c`，放入微任务队列中；
+8. 从微任务队列中取出任务`c`到主线程中，输出 `also before timeout`；微任务队列为空
+9. 从宏任务队列中取出任务到主线程，此任务中注册了一个微任务`d`，将其放入微任务队列中，接下来遇到输出`4`，宏任务队列为空
+10. 从微任务队列中取出任务`d`到主线程 ，输出`test`，微任务队列为空
+
+## 3. 结语
+
+事件循环中的任务被分为宏任务和微任务，是为了给高优先级任务一个插队的机会：微任务比宏任务有更高优先级。
+
+本文参考了很多博客文章，加上自己的理解，仅作于交流学习

@@ -7,7 +7,7 @@ export function RenderImg({width = 'atuo', src, text}) {
       style={{width: width}}>
       <img
         className={styles.img}
-        src={src}
+        src={src.default}
         alt=""/>
         <div>{text}</div>
     </div>

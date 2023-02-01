@@ -10,19 +10,19 @@ import {RenderImg} from '../../src/common/index.js'
 贝塞尔曲线就是这样的一条曲线，它是依据四个位置任意的点坐标绘制出的一条光滑曲线。在历史上，研究贝塞尔曲线的人最初是按照已知曲线参数方程来确定四个点的思路设计出这种矢量曲线绘制法。贝塞尔曲线的有趣之处更在于它的“皮筋效应”，也就是说，随着点有规律地移动，曲线将产生皮筋伸引一样的变换，带来视觉上的冲击。1962年，法国数学家Pierre Bézier第一个研究了这种矢量绘制曲线的方法，并给出了详细的计算公式，因此按照这样的公式绘制出来的曲线就用他的姓氏来命名是为贝塞尔曲线。
 
 <RenderImg
-  src="../../img/svg/bezier1.gif"
+  src={require('./img/bezier1.gif')}
   text="线性贝塞尔曲线, t在[0,1]"
    width="300px"/>
-<RenderImg src="../../img/svg/bezier2.gif"
+<RenderImg src={require('./img/bezier2.gif')}
   text="二次贝塞尔曲线, t在[0,1]"
    width="300px"/>
-<RenderImg src="../../img/svg/bezier3.gif"
+<RenderImg src={require('./img/bezier3.gif')}
   text="三次贝塞尔曲线, t在[0,1]"
    width="300px"/>
-<RenderImg src="../../img/svg/bezier4.gif"
+<RenderImg src={require('./img/bezier4.gif')}
   text="四次贝塞尔曲线, t在[0,1]"
    width="300px"/>
-<RenderImg src="../../img/svg/bezier5.gif"
+<RenderImg src={require('./img/bezier5.gif')}
   text="五次贝塞尔曲线, t在[0,1]"
    width="300px"/>
 
@@ -75,7 +75,7 @@ SVG中path的元素，也就是路径绘制，属性名称是d, 具体值是由�
 ## 3. 三次贝塞尔曲线
 <RenderImg
   width="600px"
-  src="../../img/svg/bezier3-example.png"/>
+  src={require('./img/bezier3-example.png')}/>
 
 上图，是Adobe Photoshop中使用钢笔工具时候的截图再加工。所谓钢笔工具抠图实际上就是一个一个贝塞尔曲线连接的结果，各类图形绘制软件类似工具本质上都是贝塞尔曲线。
 
@@ -143,7 +143,7 @@ S 命令可以用来创建与前面一样的贝塞尔曲线，但是，如果 S 
 
 <RenderImg
   width="300px"
-  src="../../img/svg/bezier3-sc.png"/>
+  src={require('./img/bezier3-sc.png')}/>
 
 代码示例：
 ```javascript
@@ -163,7 +163,7 @@ S x2 y2, x y
 ## 4. 二次贝塞尔曲线
 <RenderImg
   width="300px"
-  src="../../img/svg/bezier2.png"/>
+  src={require('./img/bezier2.png')}/>
 
 贝塞尔曲线是二次贝塞尔曲线 Q，它比三次贝塞尔曲线简单，只需要一个控制点，用来确定起点和终点的曲线斜率。因此它需要两组参数，控制点和终点坐标。
 ```javascript
@@ -177,7 +177,7 @@ S x2 y2, x y
 ```
 <RenderImg
   width="300px"
-  src="../../img/svg/bezier2-qt.png"/>
+  src={require('./img/bezier2-qt.png')}/>
 
 和之前一样，快捷命令 T 会通过前一个控制点，推断出一个新的控制点。这意味着，在你的第一个控制点后面，可以只定义终点，就创建出一个相当复杂的曲线。
 需要注意的是，T 命令前面必须是一个 Q 命令，或者是另一个 T 命令，才能达到这种效果。如果 T 单独使用，那么控制点就会被认为和终点是同一个点，所以画出来的将是一条直线。

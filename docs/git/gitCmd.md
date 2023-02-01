@@ -160,7 +160,7 @@ import { RenderImg } from '../../src/common/index.js'
 
 <RenderImg
   width="500px"
-  src="../../img/doc/git.1.png"/>
+  src={require('./img/git.1.png')}/>
 
   ```powershell
   git revert 96dc2eb702ad15bc36672be022d36ec8f4ccf242
@@ -169,13 +169,13 @@ import { RenderImg } from '../../src/common/index.js'
 
 <RenderImg
   width="500px"
-  src="../../img/doc/git.2.png"/>
+  src={require('./img/git.2.png')}/>
 
 因为 revert 会生成一条新的提交记录，这时会让你编辑提交信息，编辑完后 :wq 保存退出就好了。
 
 <RenderImg
   width="500px"
-  src="../../img/doc/git.3.png"/>
+  src={require('./img/git.3.png')}/>
 
 再来看下最新的 log，生成了一条 revert 记录，虽然自己之前的提交记录还是会保留着，但你修改的代码内容已经被撤回了。
 
