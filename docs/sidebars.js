@@ -26,8 +26,8 @@ const sidebars = {
         'javascript/extends',
         'javascript/extends-static',
         'javascript/extends-fun',
-        'javascript/set-propotype',
-        'javascript/regexp'
+        'javascript/set-property',
+        'javascript/reg-exp'
       ],
     },
     {
@@ -64,7 +64,7 @@ const sidebars = {
       type: 'category',
       label: 'svg',
       items: [
-        'svg/bezier'
+        'svg/bezier/index'
       ]
     },
     {
