@@ -48,7 +48,7 @@ const sidebars = {
       type: 'category',
       label: 'webpack',
       items: [
-        'webpack/require.context'
+        'webpack/require-context'
       ]
     },
     {

@@ -1,7 +1,7 @@
 ---
 title: extends函数的实现
 ---
-在阅读本章节之前请先阅读 [javascript | 原型链的继承](./extends) 和 [javascript | 继承静态属性](./extendsStatic)
+在阅读本章节之前请先阅读 [javascript | 原型链的继承](./extends) 和 [javascript | 继承静态属性](./extends-static)
 它们是实现 `extends` 函数的基础
 
 ```js
