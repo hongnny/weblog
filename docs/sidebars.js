@@ -24,10 +24,10 @@ const sidebars = {
       label: 'javascript',
       items: [
         'javascript/extends',
-        'javascript/extendsStatic',
-        'javascript/extendsFun',
-        'javascript/setPropotype',
-        'javascript/regExp'
+        'javascript/extends-static',
+        'javascript/extends-fun',
+        'javascript/set-propotype',
+        'javascript/regexp'
       ],
     },
     {
@@ -40,7 +40,7 @@ const sidebars = {
         'typescript/keyof',
         'typescript/generics',
         'typescript/infer',
-        'typescript/utilTypes',
+        'typescript/util-types',
         'typescript/class',
       ],
     },
@@ -56,8 +56,8 @@ const sidebars = {
       label: 'git',
       items: [
         'git/git',
-        'git/gitCmd',
-        'git/gitTag'
+        'git/git-cmd',
+        'git/git-tag'
       ]
     },
     {
@@ -67,12 +67,13 @@ const sidebars = {
         'svg/bezier'
       ]
     },
-    // {
-    //   type: 'category',
-    //   label: '设计模式',
-    //   items: [
-    //   ]
-    // },
+    {
+      type: 'category',
+      label: '算法',
+      items: [
+        'algorithmic/complexity/index'
+      ]
+    },
     {
       type: 'category',
       label: 'react',
