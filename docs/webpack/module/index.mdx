@@ -364,6 +364,8 @@ import author from './name';
 console.log(author, 'author')
 ```
 
+执行`npx webpack`得到的源码如下（已经过优化）：
+```js
 (() => {
   var modules = {
     "./src/name.js": (module) => {
@@ -430,5 +432,6 @@ console.log(author, 'author')
     console.log(_name__WEBPACK_IMPORTED_MODULE_0___default(), "author");
   })();
 })();
+```
 
 这里主要借助了一个`require.n`的函数，然后通过判断`module`的类型（是`CommonJS还是EsModule`）来返回对应的值。
