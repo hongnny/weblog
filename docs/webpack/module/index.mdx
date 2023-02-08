@@ -1,0 +1,434 @@
+---
+title: webpack构建原理
+---
+import { RenderImg } from '@site/src/common'
+
+## 1. 前置知识
+在正式内容开始之前，先来学一个预备小知识点，以免影响后面的学习。
+
+我们有时会使用`Object.prototype.toString`这个方法来判断数据的类型，比如：
+```js
+Object.prototype.toString.call('hello');     // "[object String]"
+Object.prototype.toString.call([1, 2]);    // "[object Array]"
+Object.prototype.toString.call(3);         // "[object Number]"
+Object.prototype.toString.call(true);      // "[object Boolean]"
+Object.prototype.toString.call(undefined); // "[object Undefined]"
+Object.prototype.toString.call(null);      // "[object Null]"
+// ... and more
+```
+
+那我们如果想自定义数据的类型标签怎么办？就像这样：
+
+```js
+Object.prototype.toString.call(new Map());       // "[object Map]"
+Object.prototype.toString.call(function* () {}); // "[object GeneratorFunction]"
+Object.prototype.toString.call(Promise.resolve()); // "[object Promise]"
+// ... and more
+```
+
+这里`toString()`方法能识别`Map、GeneratorFunction、Promise`这些类型是因为浏览器引擎为它们设置好了`toStringTag`标签，那我们该如何设置自己想要的类型标签呢？
+
+引自官方介绍：`Symbol.toStringTag`是一个内置`symbol`，它通常作为对象的属性键使用，对应的属性值应该为字符串类型，这个字符串用来表示该对象的自定义类型标签，通常只有内置的`Object.prototype.toString()`方法会去读取这个标签并把它包含在自己的返回值里。
+我们来试一试：通过`Object.defineProperty`在对象上定义`toStringTag`属性：
+
+```js
+const obj = {};
+
+//定义属性
+Object.defineProperty(obj, Symbol.toStringTag, { value: "Module" });
+
+//查看自定义类型
+console.log(Object.prototype.toString.call(obj)) //'[object Module]'改变了类型为Module
+```
+
+得到结果为`[object Module]`，拿到了我们想要的类型。
+
+## 2. 模块化发展的历史
+
+早期 JavaScript 开发很容易存在 ** 全局污染 ** 和 ** 依赖管理混乱 ** 问题，这些问题在多人开发前端应用的情况下变得更加棘手。我这里例举一个很常见的场景：
+
+```
+<body>
+  <script src="./a.js"></script>
+  <script src="./b.js"></script>
+  <script src="./c.js"></script>
+</body>
+```
+
+没有模块化，那么`script`内部的变量是可以相互污染的。比如如果`a.js`中使用了变量`name`，然后`b.js`中也使用了变量`name`，最终就会导致`a.js`中的变量`name`被覆盖，导致程序运行异常。
+
+
+## 3. COMMONJS规范
+
+`CommonJS`是一个规范，最初提出来是在浏览器以外的地方使用，并且当时被命名为**ServerJS** ，后来为了体现它的广泛性，修改为`CommonJS`规范。**Node**是`CommonJS`在服务器端一个具有代表性的实现。
+正是因为 ** Node ** 中对`CommonJS`进行了支持和实现，所以它具备以下几个特点：
+
+* 在Node中每一个js文件都是一个单独的模块
+* 该模块中，包含CommonJS规范的核心变量: `exports、module.exports、require`
+* 使用核心变量，进行模块化开发
+
+## 4. ES Module规范
+**Nodejs**借鉴了`Commonjs`实现了模块化 。从`ES6`开始， JavaScript才真正意义上有自己的模块化规范。
+`Es Module`的产生有很多优势，比如:
+
+借助`Es Module`的静态导入导出的优势，实现了`tree shaking`
+`Es Module`还可以`import()`懒加载方式实现代码分割
+
+在`Es Module`中用`export`用来导出模块，`import`用来导入模块。
+
+## 5. webpack中的基本配置
+在使用`Webpack`搭建的项目中，它是允许我们使用各种各样的模块化的。最常用的方式就是`CommonJS`和`ES Module`。那么它内部是如何帮助我们实现了代码中支持模块化呢?
+接下来将从这四个角度来研究一下它的原理：
+
+* CommonJS模块化实现原理
+* ES Module实现原理
+* CommonJS加载ES Module的原理
+* ES Module加载CommonJS的原理
+
+```json
+"devDependencies": {
+  "webpack": "^5.75.0",
+  "webpack-cli": "^5.0.1"
+}
+```
+
+webpack的基本配置，webpack.config.js
+```js
+
+module.exports = {
+  mode: "development", //防止代码压缩
+  entry: "./src/main.js",
+  devtool: "source-map",
+}
+```
+
+## 6.CommonJS模块化实现原理
+
+name.js
+```js
+module.exports = "Jonben";
+```
+
+main.js
+```js
+let author = require("./name.js");
+console.log(author, "author");
+```
+
+执行`npx webpack`得到的源码如下（已经过优化）：
+```js
+(() => {
+  var modules = {
+    "./src/name.js": (module) => {
+      module.exports = "Jonben";
+    },
+  };
+
+  // 缓存
+  var caches = {};
+
+  // require函数
+  function require(moduleId) {
+    // 检查模块是否在缓存中
+    var cachedModule = caches[moduleId];
+    if (cachedModule !== undefined) {
+      return cachedModule.exports;
+    }
+    // 创建一个新模块（并将其放入缓存）
+    var module = (caches[moduleId] = {
+      exports: {},
+    });
+
+    // 执行模块函数，对module.exports进行赋值操作
+    modules[moduleId](module, module.exports, require);
+
+    // 返回module.exports
+    return module.exports;
+  }
+
+  var exports = {};
+  // This entry need to be wrapped in an IIFE because it need to be isolated against other modules in the chunk.
+  // 自执行函数包裹与其他模块隔离。
+  (() => {
+    let author = require("./src/name.js");
+    console.log(author, "author");
+  })();
+})();
+
+```
+整个执行流程如图所示：
+<RenderImg
+  text="CommonJS编译流程"
+  src={require('./img/WeChate53cf5f0ed88e29bd38ec64672eac286.png')}/>
+
+## 7. ES Module模块化实现原理
+
+name.js
+```js
+const author = "jonben";
+
+export const age = "18";
+export default author;
+```
+
+main.js
+```js
+import author, { age } from "./name";
+
+console.log(author, "author");
+console.log(age, "age");
+```
+
+执行`npx webpack`得到的源码如下（已经过优化）：
+
+```js
+(() => {
+  "use strict";
+  var modules = {
+    "./src/name.js": (module, exports, require) => {
+      require.setModuleTag(exports);
+      require.defineProperty(exports, {
+        age: () => age,
+        default: () => DEFAULT_EXPORT,
+      });
+      const author = "jonben";
+
+      const age = "18";
+      const DEFAULT_EXPORT = author;
+    },
+  };
+
+  var caches = {};
+
+  function require(moduleId) {
+    var cachedModule = caches[moduleId];
+    if (cachedModule !== undefined) {
+      return cachedModule.exports;
+    }
+    var module = (caches[moduleId] = {
+      exports: {},
+    });
+
+    modules[moduleId](module, module.exports, require);
+
+    return module.exports;
+  }
+
+  // 对exports对象做代理
+  require.defineProperty = (exports, definition) => {
+    for (var key in definition) {
+      if (
+        require.hasOwnProperty(definition, key) &&
+        !require.hasOwnProperty(exports, key)
+      ) {
+        Object.defineProperty(exports, key, {
+          enumerable: true,
+          get: definition[key],
+        });
+      }
+    }
+  };
+
+  // 判断是否为自身属性
+  require.hasOwnProperty = (obj, prop) =>
+    Object.prototype.hasOwnProperty.call(obj, prop);
+
+  // 定义模块为__esModule类型
+  require.setModuleTag = (exports) => {
+    if (typeof Symbol !== "undefined" && Symbol.toStringTag) {
+      Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+    }
+    Object.defineProperty(exports, "__esModule", { value: true });
+  };
+
+  var exports = {};
+  (() => {
+    require.setModuleTag(exports);
+    var _name__WEBPACK_IMPORTED_MODULE_0__ = require("./src/name.js");
+
+    console.log(_name__WEBPACK_IMPORTED_MODULE_0__["default"], "author");
+    console.log(_name__WEBPACK_IMPORTED_MODULE_0__.age, "age");
+  })();
+})();
+
+```
+
+这里与`CommonJS`模块化原理不同的在于：
+
+通过`equire.setModuleTag`函数来标识这是一个`ES Module`(在现在这个例子中其实没什么作用)
+给传入的`exports`对象通过`Object.defineProperty`做了一层代理（这样当访问`default`属性时，其实访问的是`DEFAULT_EXPORT`变量，访问age属性时，访问的是age变量）。
+
+## 8、CommonJS 加载 ES Module的原理
+
+name.js
+```js
+const author = "jonben";
+export const age = "18";
+export default author;
+```
+
+main.js
+```js
+let author = require("./name");
+console.log(author, "author");
+```
+
+执行`npx webpack`得到的源码如下（已经过优化）：
+
+```js
+(() => {
+  var modules = {
+    "./src/name.js": (
+      module,
+      exports,
+      require
+    ) => {
+      "use strict";
+      require.setModuleTag(exports);
+      require.defineProperty(exports, {
+        age: () => age,
+        default: () => DEFAULT_EXPORT,
+      });
+      const author = "jonben";
+
+      const age = "18";
+      const DEFAULT_EXPORT = author;
+    },
+  };
+
+  var cache = {};
+
+  function require(moduleId) {
+    var cachedModule = cache[moduleId];
+    if (cachedModule !== undefined) {
+      return cachedModule.exports;
+    }
+    var module = (cache[moduleId] = {
+      exports: {},
+    });
+
+    modules[moduleId](module, module.exports, require);
+
+    return module.exports;
+  }
+
+  require.defineProperty = (exports, definition) => {
+    for (var key in definition) {
+      if (
+        require.hasOwnProperty(definition, key) &&
+        !require.hasOwnProperty(exports, key)
+      ) {
+        Object.defineProperty(exports, key, {
+          enumerable: true,
+          get: definition[key],
+        });
+      }
+    }
+  };
+
+  require.hasOwnProperty = (obj, prop) =>
+    Object.prototype.hasOwnProperty.call(obj, prop);
+
+  require.setModuleTag = (exports) => {
+    if (typeof Symbol !== "undefined" && Symbol.toStringTag) {
+      Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+    }
+    Object.defineProperty(exports, "__esModule", { value: true });
+  };
+
+  var exports = {};
+  (() => {
+    let author = require("./src/name.js");
+    console.log(author, "author");
+  })();
+})();
+
+```
+运行结果
+```js
+{ age: [Getter], default: [Getter] } author
+```
+
+
+## 9、ES Module 加载 CommonJS 的原理
+name.js
+```js
+const author = "jonben";
+module.exports = author;
+```
+
+main.js
+```js
+import author from './name';
+
+console.log(author, 'author')
+```
+
+(() => {
+  var modules = {
+    "./src/name.js": (module) => {
+      const author = "jonben";
+      module.exports = author;
+    },
+  };
+
+  var cache = {};
+
+  function require(moduleId) {
+    var cachedModule = cache[moduleId];
+    if (cachedModule !== undefined) {
+      return cachedModule.exports;
+    }
+    var module = (cache[moduleId] = {
+      exports: {},
+    });
+
+    modules[moduleId](module, module.exports, require);
+
+    return module.exports;
+  }
+
+  require.n = (module) => {
+    // 根据moudle的类型来返回不同的结果
+    var getter = module && module.__esModule ? () => module["default"] : () => module;
+    // 代理a属性为getter
+    require.defineProperty(getter, { a: getter });
+    return getter;
+  };
+
+  require.defineProperty = (exports, definition) => {
+    for (var key in definition) {
+      if (
+        require.hasOwnProperty(definition, key) &&
+        !require.hasOwnProperty(exports, key)
+      ) {
+        Object.defineProperty(exports, key, {
+          enumerable: true,
+          get: definition[key],
+        });
+      }
+    }
+  };
+
+  require.hasOwnProperty = (obj, prop) =>
+    Object.prototype.hasOwnProperty.call(obj, prop);
+
+  require.setModuleTag = (exports) => {
+    if (typeof Symbol !== "undefined" && Symbol.toStringTag) {
+      Object.defineProperty(exports, Symbol.toStringTag, { value: "Module" });
+    }
+    Object.defineProperty(exports, "__esModule", { value: true });
+  };
+
+  var __webpack_exports__ = {};
+  (() => {
+    "use strict";
+    require.setModuleTag(__webpack_exports__);
+    var _name__WEBPACK_IMPORTED_MODULE_0__ = require("./src/name.js");
+    var _name__WEBPACK_IMPORTED_MODULE_0___default = require.n(_name__WEBPACK_IMPORTED_MODULE_0__);
+
+    console.log(_name__WEBPACK_IMPORTED_MODULE_0___default(), "author");
+  })();
+})();
+
+这里主要借助了一个`require.n`的函数，然后通过判断`module`的类型（是`CommonJS还是EsModule`）来返回对应的值。
