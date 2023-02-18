@@ -1,0 +1,354 @@
+---
+title: webpack动态导入模块原理
+---
+## 1. 前置知识
+
+`import()`动态的加载模块。调用`import`的之处，被视为分割点，意思是，被请求的模块和它引用的所有子模块，会分割到一个单独的`chunk`中。
+
+ 
+:::info warning
+import() 特性依赖于内置的 Promise。如果想在低版本浏览器中使用 import()，记得使用像 es6-promise 或者 promise-polyfill 这样 polyfill 库，来预先填充(shim) Promise 环境。
+:::
+
+## 2. 该文档使用的webpack版本
+```js
+  "webpack": "^5.75.0",
+  "webpack-cli": "^5.0.1"
+```
+
+## 3. 场景还原
+main.js
+```js
+const btn = document.getElementById("button");
+btn.onclick = function () {
+  import("./test").then((module) => {
+    const print = module.default;
+    print();
+  });
+};
+```
+test.js
+```js
+export default () => {
+  console.log("按钮点击了");
+};
+```
+`main.js`页面中有一个按钮，然后点击按钮，通过`import()`语法获取`test.js`中的代码，然后执行。
+
+
+## 4. 源代码分析
+点击按钮的源码
+```js
+btn.onclick = function () {
+  require.e("src_test_js")
+		.then(require.bind(require,"./src/test.js"))
+		.then((module) => {
+			const print = module.default;
+			print();
+		});
+}
+```
+### 1. 首先分析 require.e 的源码
+
+```js
+require.f = {};
+require.e = (chunkId) => {
+  const keys = Object.keys(require.f)
+  const promises = keys.reduce((promise, key) => {
+    require.f[key](chunkId, promise);
+    return promise;
+  }, [])
+  return Promise.all(promises);
+};
+```
+分析
+* 定义`require.f`为一个空对象
+* `Object.keys(require.f)`获取空对象的所有键
+
+  走到这里我们分析`requre.f`为一个空对象为什么要遍历呢，那是因为`webpack`源码会在`require.f`身上增加一个方法`j`
+* 由此我们知道 keys = ['j']
+* 然后执行`reqire.f.j`函数，并返回一个`promise`组成的数组
+* 所以我们可以将`require.e`函数源码进行简化
+
+简化后的代码为:
+```js
+require.e = function (chunkId) {
+  // 定义promises
+  let promises = [];
+  // 给promises赋值
+  require.f.j(chunkId, promises);
+  // 通过promise.all让所有的promise执行结束，在执行后续方法
+  return Promise.all(promises);
+};
+```
+### 2. 然后回过头来在分析 require.f.j 方法
+```js
+require.f.j = function(chunkId, promises) {
+  var promise = new Promise((resolve, reject) => {
+    installedChunks[chunkId] = [resolve, reject]
+    // installedChunks = {main: 0, "src_test_js":[ resolve, reject ]}
+  })
+  promises.push(promise);
+  var url = require.publicPath + chunkId + ".main.js";
+  // url = src_test_js.main.js，即打包后 test.js 的输出路径
+  // 创建并执行脚本
+  let script = document.createElement("script");
+  script.src = url;
+  document.head.appendChild(script);
+}
+```
+该方法的作用就是给`promises`数组赋值，并通过`script`去加载文件并执行文件
+
+### 3. 加载 src_test_js.main.js 并执行
+```js
+(self["webpackChunklazy_module"].push([["src_test_js"], {
+  "./src/test.js":
+    ((modules, exports, require) => {
+      require.defineProperty(exports, {
+        "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+      });
+      const __WEBPACK_DEFAULT_EXPORT__ = (() => {
+        console.log("按钮点击了");
+      });
+    })
+}]);
+```
+这里的`self`其实就是`window`，`webpackChunklazy_module`就是一个名字，它是`webpackChunk` + 我们`package.json`中的`name`字段拼接来的，我这里是`lazy_module`。
+
+翻译过来就是要执行`window.webpackChunklazy_module.push([...])`这个函数
+```js
+self["webpackChunklazy_module"] = self["webpackChunklazy_module"] || [];
+var chunkLoadingGlobal = self["webpackChunklazy_module"];
+chunkLoadingGlobal.push = webpackJsonpCallback.bind(
+  null,
+  chunkLoadingGlobal.push.bind(chunkLoadingGlobal)
+);
+```
+基础知识
+```js
+const a = (x, y) => { console.log(x, y)}
+const b = a.bind(null, '我是b函数')
+b(2) // 我是b函数 2
+```
+通过`bind`我们实现了通过调用`b`函数给`a`函数的第一个参数`x`进行了默认的**赋值**操作，通过`b`函数的执行而传入的参数会被`a`函数的第二个参数`y`接收到。
+
+通过源码知道`window.webpackChunklazy_module.push`指向的是`webpackJsonpCallback`函数，所以我们接下来分析`webpackJsonpCallback`函数的实现
+
+### 4. webpackJsonpCallback函数的实现
+```js
+var webpackJsonpCallback = (parentChunkLoadingFunction, data) => {
+  var [chunkIds, moreModules] = data;
+  // 这里chunkIds=["src_test_js"]
+  // moreModules={xxx} test.js文件的模块定义
+
+  for (const moduleId in moreModules) {
+    // 合并modules，此时modules中有了test.js的代码
+    modules[moduleId] = moreModules[moduleId];
+  }
+  let i = 0, chunkId = 0;
+  for(;i < chunkIds.length; i++) {
+    chunkId = chunkIds[i];
+    //chunkId = src_test_js
+
+    // installedChunks = {main: 0, "src_test_js":[ resolve, reject ]}
+    if(installedChunks[chunkId]) {
+      // 执行resolve
+      installedChunks[chunkId][0]();
+    }
+    // 标识代码已经加载完成
+    installedChunks[chunkId] = 0;
+  }
+}
+```
+此时`modules`的值为：
+```js
+var modules = {
+   "./src/test.js":
+    ((modules, exports, require) => {
+      require.defineProperty(exports, {
+        "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+      });
+      const __WEBPACK_DEFAULT_EXPORT__ = (() => {
+        console.log("按钮点击了");
+      });
+    })
+};
+
+```
+
+### 5. 文件合并完成后，加载该文件
+```js
+// 前4步操作，为了合并文件
+require.e("src_test_js")
+
+    .then(
+      // 这一步为真正加载执行该文件代码
+      require.bind(require, "./src/test.js")
+    )
+
+    .then(module => {
+      // 获取并执行代码
+      const print = module.default;
+			print();
+    })
+```
+`require`函数的实现可以参考之前的[文档](/docs/webpack/module/#6commonjs模块化实现原理)
+```js
+var cache = {};
+function require(moduleId) {
+  var cachedModule = cache[moduleId];
+  if (cachedModule !== undefined) {
+    return cachedModule.exports;
+  }
+  var module = (cache[moduleId] = {
+    exports: {},
+  });
+  modules[moduleId](module, module.exports, require);
+  return module.exports;
+}
+
+require.defineProperty = (exports, definition) => {
+  for (var key in definition) {
+    Object.defineProperty(exports, key, {
+      enumerable: true,
+      get: definition[key],
+    });
+  }
+};
+```
+
+## 4. 整体代码为
+```js
+//初始化：默认情况下这里放的是同步代码块，这里的demo因为没有同步代码，所以是一个空的模块对象
+var modules = {};
+
+var cache = {};
+
+function require(moduleId) {
+  var cachedModule = cache[moduleId];
+  if (cachedModule !== undefined) {
+    return cachedModule.exports;
+  }
+  var module = (cache[moduleId] = {
+    exports: {},
+  });
+  modules[moduleId](module, module.exports, require);
+  return module.exports;
+}
+
+
+require.defineProperty = (exports, definition) => {
+  for (var key in definition) {
+    Object.defineProperty(exports, key, {
+      enumerable: true,
+      get: definition[key],
+    });
+  }
+};
+
+// 已经安装好的代码块，main.js就是对应的main代码块，0表示已经加载成功，已经就绪
+var installedChunks = {
+  main: 0,
+};
+
+require.publicPath = ""; //output中的publicPath属性
+
+require.f = {}
+
+require.f.j = function(chunkId, promises) {
+  var promise = new Promise((resolve, reject) => {
+    installedChunks[chunkId] = [resolve, reject]
+    // installedChunks = {main: 0, "src_test_js":[ resolve, reject ]}
+  })
+  promises.push(promise);
+  var url = require.publicPath + chunkId + ".main.js";
+  // url = src_test_js.main.js，即打包后 test.js 的输出路径
+  // 创建并执行脚本
+  let script = document.createElement("script");
+  script.src = url;
+  document.head.appendChild(script);
+}
+
+var webpackJsonpCallback = (parentChunkLoadingFunction, data) => {
+  var [chunkIds, moreModules] = data;
+  // 这里chunkIds=["src_test_js"]
+  // moreModules={xxx} test.js文件的模块定义
+
+  for (const moduleId in moreModules) {
+    // 合并modules，此时modules中有了test.js的代码
+    modules[moduleId] = moreModules[moduleId];
+  }
+
+  let i = 0, chunkId = 0;
+  for(;i < chunkIds.length; i++) {
+    chunkId = chunkIds[i];
+    //chunkId = src_test_js
+
+    // installedChunks = {main: 0, "src_test_js":[ resolve, reject ]}
+    if(installedChunks[chunkId]) {
+      // 执行resolve
+      installedChunks[chunkId][0]();
+    }
+    // 标识代码已经加载完成
+    installedChunks[chunkId] = 0;
+  }
+}
+
+self["webpackChunklazy_module"] = self["webpackChunklazy_module"] || [];
+var chunkLoadingGlobal = self["webpackChunklazy_module"];
+chunkLoadingGlobal.push = webpackJsonpCallback.bind(
+  null,
+  chunkLoadingGlobal.push.bind(chunkLoadingGlobal)
+);
+chunkLoadingGlobal.push = webpackJsonpCallback.bind(
+  null,
+  chunkLoadingGlobal.push.bind(chunkLoadingGlobal)
+);
+
+require.e = (chunkId) => {
+  const keys = Object.keys(require.f)
+  const promises = keys.reduce((promise, key) => {
+    require.f[key](chunkId, promise);
+    return promise;
+  }, [])
+  return Promise.all(promises);
+};
+
+const btn = document.getElementById("button");
+btn.onclick = function () {
+  require.e("src_test_js")
+		.then(require.bind(require,"./src/test.js"))
+		.then((module) => {
+			const print = module.default;
+			print();
+		});
+}
+
+```
+### 1. 打包后的 test.js
+```js
+"use strict";
+(
+  self["webpackChunklazy_module"] = self["webpackChunklazy_module"] || [])
+  .push(
+    [
+      ["src_test_js"],
+      {
+        "./src/test.js": ((modules, exports, require) => {
+            require.defineProperty(exports, {
+              "default": () => (__WEBPACK_DEFAULT_EXPORT__)
+            });
+            const __WEBPACK_DEFAULT_EXPORT__ = (() => {
+              console.log("按钮点击了");
+            });
+          })
+      }
+    ]
+)
+```
+
+## 5. 总结
+本段文章主要是展示了webpack是实现懒加载的原理，参考了[文章](https://juejin.cn/post/7152516872330543141/)，通过案例再次加深对其理解。
+
+
+

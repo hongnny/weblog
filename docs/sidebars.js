@@ -49,6 +49,7 @@ const sidebars = {
       label: 'webpack',
       items: [
         'webpack/module/index',
+        'webpack/async-module/index',
         'webpack/require-context'
       ]
     },
