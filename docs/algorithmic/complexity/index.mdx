@@ -1,9 +1,6 @@
 ---
 title: 时间复杂度和空间复杂度
 ---
-
-import { RenderImg } from '@site/src/common'
-
 ## 1. 什么是复杂度
 
 * 程序执行时需要的计算量和内存空间（和代码简洁无关）
@@ -76,12 +73,7 @@ function sum(n) {
 * `O(2^n)`：Exponential Growth 指数
 * `O(n!)`：Factorial 阶乘
 
-
-<RenderImg
-  width="400px"
-  src={require('./img/WeChatd50e9d5ecd0a69c1c3b2c8a4b62e92f8.jpg')}
-  />
-
+![image](./img/WeChatd50e9d5ecd0a69c1c3b2c8a4b62e92f8.jpg)
 
 ## 5. logN的底
 1、如果`a(a>0，且a≠1)`的`b`次幂等于`N`，即`a^b=N`，那么数b叫做以`a`为底`N`的对数，记作：`logaN=b`,其中`a`叫做对数的底数，`N`叫做真数。
@@ -95,10 +87,7 @@ function sum(n) {
 编程比赛`OI`中一般都是以`2`为底，计算时间复杂度的时候一般是默认`log2`。
 在计算时间复杂度的时候，你会发现 ** log的底数并不重要 **，底数的巨大变化并不会带来结果上的 ** 数量级 **变化。
 
-<RenderImg
-  width="400px"
-  src={require('./img/20191203145801554.png')}
-  />
+![image](./img/20191203145801554.png)
 
 假设有底数为2和3的两个对数函数，如上图。当X取N（数据规模）时，求所对应的时间复杂度得比值，即对数函数对应的y值，用来衡量对数底数对时间复杂度的影响。
 

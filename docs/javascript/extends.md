@@ -59,7 +59,8 @@ Student.prototype.getSchool = function() {
 
 // Student.prototype = Person.prototype
 // 当时认为这样也可以实现继承，但是有一个缺点是：
-// 当去修改了子类原型身上的say方法时，其父类的say方法就会被替换，导致后面在创建person对象时say方法就被替换掉了
+// 当去修改了子类原型身上的say方法时
+// 其父类的say方法就会被替换，导致后面在创建person对象时say方法就被替换掉了
 // 我们并不希望此类事件发生，所以我们要使用new Person()来规避这个问题
 Student.prototype = new Person()
 Student.prototype.constructor = Student;

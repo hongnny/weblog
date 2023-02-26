@@ -24,7 +24,10 @@ const Extends = (function() {
     const extendStaticAttrWidthProto = function(son, parent) {
       son.__proto__ = parent
     }
-    return Object.setPrototypeOf || extendStaticAttrWidthForIn || extendStaticAttrWidthObjectKeys || extendStaticAttrWidthProto
+    return (Object.setPrototypeOf
+      || extendStaticAttrWidthForIn
+      || extendStaticAttrWidthObjectKeys
+      || extendStaticAttrWidthProto)
   })()
   return function(son, parent) {
     // 继承静态属性和方法

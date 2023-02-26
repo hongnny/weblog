@@ -5,15 +5,13 @@ authors: jonben
 tags: [javascript, 设计模式]
 ---
 
-import { RenderImg } from '../../src/common/index.js'
-
 状态模式是一个有趣的模式，它可能是解决一些需求场景的最佳方式。虽然状态模式不是一种易于学习的模式（它通常会导致代码量增加），但一旦您了解了状态模式的本质，您将在未来感谢它无与伦比的好处。
 
 网上很多文章在解释状态模式时，都过于理论化，难以理解。这里我尝试用一个实际案例用通俗易懂的方式来解释。
 
 ## 1. 打开/关闭灯
 
-<RenderImg src={require('./img/light.png')}/>
+![image](./img/light.png)
 
 让我们想象一个场景，其中有一盏灯只有一个开关。
 
@@ -59,7 +57,7 @@ class Light{
 
 第一次按下开关打开弱光，第二次按下打开强光，第三次按下关闭灯。
 
-<RenderImg src={require('./img/light-1.png')}/>
+![image](./img/light-1.png)
 
 现在让我们模拟这样的行为，我们应该如何写代码？
 
@@ -112,7 +110,7 @@ class Light{
 
 LowLightState 的clickButton 方法将状态切换为StrongLightState，StrongLightState 的clickButton 将状态切换为OffState。
 
-<RenderImg src={require('./img/light-3.png')}/>
+![image](./img/light-3.png)
 
 而我们的Light只需要关注它处于什么状态，不需要处理状态切换，状态切换由每个状态自己处理。
 
@@ -175,14 +173,14 @@ LowLightState 的clickButton 方法将状态切换为StrongLightState，StrongLi
 ```
 图解:
 
-<RenderImg src={require('./img/light-4.png')}/>
+![image](./img/light-4.png)
 
 这样的代码可以解决前面提到的问题：
 轻物体更简单。它只需要调用this.currentState.clickButton()，状态切换可以由状态对象自己处理。
 
 如果将来有新的状态，我们只需要创建一个新的状态类，然后修改其相邻的状态类，而不需要对现有代码进行大量修改。
 
-<RenderImg src={require('./img/light-5.png')}/>
+![image](./img/light-5.png)
 
 这种编写代码的技术就是状态模式。
 

@@ -21,6 +21,6 @@ descriptor: 属性描述符
 obj: 在其上定义或修改属性的目标对象
 props: 属性对象，其属性值为属性描述符，包括数据属性描述符和访问器属性描述符。
 
-:::tip 提示
+:::tip 
 关于数据属性描述符和访问器属性描述符用defineProperties定义的数据属性默认是不可枚举的，即enumerable: false
 :::

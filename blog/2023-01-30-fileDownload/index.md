@@ -30,7 +30,7 @@ a.click()
 这里的重点是`a`标签的`download`属性，这个属性是`HTML5`新增的。
 它的作用是指定下载的文件名，如果不指定，那么下载的文件名就会根据请求内容的`Content-Disposition`来确定，如果没有`Content-Disposition`，那么就会使用请求的`URL`的最后一部分作为文件名。
 
-## 1. window.open
+## 2. window.open
 
 上面使用a标签的案例也可以通过window.open来实现，效果是一样的，代码如下：
 

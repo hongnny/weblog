@@ -43,7 +43,8 @@ tsc --init
     "rootDir": "./src",
     // 启用严格检查模式
     "strict": true,
-    // null 和 undefined即是值，也是类型, null 和 undefined 值 只能赋值给 any ,unknown和它们各自的类型
+    // null 和 undefined即是值，也是类型, 
+    // null 和 undefined 值 只能赋值给 any ,unknown和它们各自的类型
     "strictNullChecks":false,
     // 一般是指表达式或函数参数上有隐含的 any类型时报错
     "noImplicitAny": true,
@@ -60,8 +61,6 @@ tsc --init
     "paths": {
       "@/datatype/*": ["datatype/*"]
     },    
-    // 有些依赖库底层 为了兼容CommonJs规范、AMD规范这二者的规范中相互兼容，使用了 export =，将二者规范统一。
-    // "esModuleInterop":true表示允许依赖库中出现export = 这种兼容规范导出的格式，TS 可以用import from导入 
     "esModuleInterop": true,  
   },
   // 需要编译的ts文件一个*表示文件匹配**表示忽略文件的深度问题
