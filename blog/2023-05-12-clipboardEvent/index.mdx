@@ -1,0 +1,58 @@
+---
+slug: ClipboardEvent
+title: 用户粘贴事件
+authors: jonben
+tags: [javascript,网络]
+---
+## 1. [ClipboardEvent](https://developer.mozilla.org/zh-CN/docs/Web/API/ClipboardEvent)
+
+## 2. [ClipboardEvent.clipboardData](https://developer.mozilla.org/zh-CN/docs/Web/API/ClipboardEvent/clipboardData)
+`ClipboardEvent.clipboardData`属性保存了一个`DataTransfer`对象，这个对象可用于：
+
+描述哪些数据可以由`cut`和`copy`事件处理器放入剪切板，通常通过调用`setData(format, data)`方法；
+获取由`paste`事件处理器拷贝进剪切板的数据，通常通过调用`getData(format)`方法
+
+`getData()`是一个方法，用于从剪贴板获取数据。它只接受一个参数，即要获取的数据类型（也称为格式或`MIME`类型）。该参数通常是一个字符串，可以是预定义的MIME类型，如`text/plain`、`text/html`、`image/png`等，或者自定义的`MIME`类型。
+
+## 3. [DataTransfer](https://developer.mozilla.org/zh-CN/docs/Web/API/DataTransfer)
+`DataTransfer`对象用于保存拖动并放下（`drag and drop`）过程中的数据。它可以保存一项或多项数据，这些数据项可以是一种或者多种数据类型
+
+**实例上的两个属性**
+### 1. items
+`items`属性只读，是拖动操作中 数据传输项的列表。该列表包含了操作中每一项目的对应项，如果操作没有项目，则列表为空。
+```js
+itemList = dataTransfer.items;
+```
+返回一个`DataTransferItemList`对象，包含了表示拖动操作中被拖动项的`DataTransferItem`对象，每一个拖动项对应一个列表项。如果拖动操作中没有数据，则列表为空。
+
+### 2. types
+`types`是只读属性。它返回一个我们在`dragstart`事件中设置的拖动数据格式 (如 字符串) 的数组。格式顺序与拖动操作中包含的数据顺序相同。拖动操作中使用的数据格式数组。每种格式都是字符串类型。如果拖动操作不包含数据，则此数组列表将为空。如果拖动操作中包含任何文件，则其中一个类型将是`Files`。
+
+## 4. [DataTransferItem](https://developer.mozilla.org/zh-CN/docs/Web/API/DataTransferItem/kind)
+文档写的比较详细，直接参考
+
+## 5. 实战
+```js
+window.addEventListener('paste', e => {
+  e.preventDefault()
+  const dataTransfer = e.clipboardData
+  const items = dataTransfer.items
+  if (!items) return
+  let item
+  for (let i = 0; i < items.length; i++) {
+    item = items[i]
+    if (item.kind === 'file') {
+      if (!item.type.match('^image/')) return
+      // 图片
+      console.log(item.getAsFile())
+    } else {
+      if (!item.type.match('^text/plain')) return
+      // 文本
+      item.getAsString(s => {
+        console.log(s)
+      })
+    }
+  }
+})
+```
+
