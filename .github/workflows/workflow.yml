@@ -31,7 +31,7 @@ jobs:
         with:
           # 这里的 ACCESS_TOKEN 名字需要和下文中的相对应
           ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
-          REPOSITORY_NAME: jonbenery/jonbenery.github.io
+          REPOSITORY_NAME: hongnny/hongnny.github.io
           # 打包后的文件部署到哪个分支上
           BRANCH: main
           # 打包后的文件在哪里

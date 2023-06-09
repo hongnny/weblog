@@ -4,14 +4,14 @@
 const lightCodeTheme = require('prism-react-renderer/themes/github');
 const darkCodeTheme = require('prism-react-renderer/themes/dracula');
 
-const url = 'https://jonbenery.github.io';
-const homePage = 'https://github.com/jonbenery/weblog';
+const url = 'https://hongnny.github.io';
+const homePage = 'https://github.com/hongnny/weblog';
 
 const pagePlugins = ['openApi', 'computer']
 
 /** @type {import('@docusaurus/types').Config} */
 const config = {
-  title: 'JonBen',
+  title: 'Hongnny',
   tagline: '万物皆有裂痕，那是光照进来的地方',
   favicon: 'img/favicon.ico',
 
@@ -23,7 +23,7 @@ const config = {
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'Jonben', // Usually your GitHub org/user name.
+  organizationName: 'Hongnny', // Usually your GitHub org/user name.
   projectName: 'weblog', // Usually your repo name.
 
   onBrokenLinks: 'throw',

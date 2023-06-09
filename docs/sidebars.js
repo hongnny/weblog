@@ -78,6 +78,14 @@ const sidebars = {
     },
     {
       type: 'category',
+      label: '设计模式',
+      items: [
+        'design/fs/index',
+        'design/chain/index'
+      ]
+    },
+    {
+      type: 'category',
       label: 'react',
       items: [
         'react/react/index',
