@@ -18,7 +18,9 @@ const Extends = (function() {
     }
     // 继承静态属性的第二种方法
     const extendStaticAttrWidthObjectKeys = function(son, parent) {
-      son[key] = parent[key]
+      Object.keys(parent).forEach(key => {
+        son[key] = parent[key]
+      })
     }
     // 继承静态属性的第三种方法
     const extendStaticAttrWidthProto = function(son, parent) {
