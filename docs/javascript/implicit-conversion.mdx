@@ -1,0 +1,128 @@
+---
+title: 隐式转换
+---
+
+# javascript中的隐式转换
+
+## 1. 首先我们来看一个面试题
+
+问：如何让下面的条件成立？
+```js
+if (a == 1 && a == 2 && a == 3) {
+  console.log('结果')
+}
+```
+
+
+## 2. 首先来看基本数据类型之间的比较的规则
+```js
+let x1 = 1
+let x2 = '1'
+let x3 = true
+let x4 = 0
+console.log(x1 == x2) // true
+console.log(x1 == x3) // true
+console.log(x3 == x4) // false
+```
+
+这是因为基本数据类型之间的比较遵循一下几种规则
+:::info 说明
+* 如果两个数据类型相同，则执行严格的比较
+* 如过两个数据类型不相同
+  + String == Number；会将`String`转`Number`，转换失败会得到`NAN`, 然后再进行比较
+  + Boolean == Any；会将`Boolean`转`Number`，`true`转换为`1`，`false`转换为`0`, 然后再进行比较
+:::
+
+
+## 3. 原始值
+> [MDN](https://developer.mozilla.org/zh-CN/docs/Web/JavaScript/Data_structures#%E5%BC%BA%E5%88%B6%E5%8E%9F%E5%A7%8B%E5%80%BC%E8%BD%AC%E6%8D%A2)的解释为：
+>
+> 除了`Object`以外，所有类型都定义了表示在语言最低层面的不可变值。我们将这些值称为原始值。
+
+其实简单来说就基本数据类型
+* Null
+* Undefined
+* Number
+* Boolean
+* String
+* Symbol
+* Bigint
+
+## 4. 如果操作数之一是对象，而另一个是原始值，则将对象转换为原始值。
+
+在JavaScript中，如果想要将对象转换成基本类型时，也就是所谓的拆箱时，会调用`toPrimitive()`
+```js
+let b = {
+    [Symbol.toPrimitive](hint) {
+        console.log('hint=>', hint)
+        if (hint === 'string') {
+            return '1'
+        }
+        if (hint === 'number') {
+            return 1
+        }
+        return null
+    }
+}
+console.log(+b) // 1
+console.log(`${b}`) // '1'
+console.log('b' + b) // 'bnull'
+console.log(1 == b) // false
+```
+如果 Symbol.toPrimitive 方法存在，则它会被用于所有 hint，无需更多其他方法。
+从代码中我们可以看到，根据转换的不同，`[Symbol.toPrimitive]`方法处理了所有的转换情况
+
+如果没有`[Symbol.toPrimitive]`，那么`JavaScript`将尝试寻找`toString`和`valueOf`方法：
+1. 对于 "string" hint：调用`toString`方法。
+2. 对于其他 hint：调用`valueOf`方法，如果它不存在，则调用`toString`方法。
+```js
+let b = {
+  valueOf () {
+    console.log('valueOf')
+    return 1
+  },
+  toString () {
+    console.log('toString')
+    return '2'
+  }
+}
+console.log(+b) // valueof 1
+console.log(`${b}`) // toString '2'
+console.log(b == '2') // false
+```
+相等比较`b == '1'`通过以上分析可知，符合第二条规则则调用`valueOf`方法，所以得到转换后的值为`1`
+
+但是，此时如果让`valueOf`返回一个对象呢
+```js
+let b = {
+  valueOf () {
+    console.log('valueOf')
+    return {}
+  },
+  toString () {
+    console.log('toString')
+    return '2'
+  }
+}
+console.log(b == '2') // true
+```
+发现控制台输出为：
+```powershell
+- valueOf
+- toString
+- true
+```
+这是因为，在进行相等比较的时候，会首先调用对象的`valueOf`方法，当`valueOf`返回的不是基本原始（数据）类型的时候，就会调用`toString`方法
+
+## 总结
+
+JavaScript 提供三种不同的值比较运算：
+* ===——严格相等（三个等号）
+* ==——宽松相等（两个等号）
+* Object.is()
+
+选择哪个运算取决于你需要什么样的比较。简单来说：
+
+* 在比较两个操作数时，双等号（==）将执行类型转换，并且会按照 IEEE 754 标准对 NaN、-0 和 +0 进行特殊处理（故 NaN != NaN，且 -0 == +0）；
+* 三等号（===）做的比较与双等号相同（包括对 NaN、-0 和 +0 的特殊处理）但不进行类型转换；如果类型不同，则返回 false；
+* Object.is() 既不进行类型转换，也不对 NaN、-0 和 +0 进行特殊处理（这使它和 === 在除了那些特殊数字值之外的情况具有相同的表现）。

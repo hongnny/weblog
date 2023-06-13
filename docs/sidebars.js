@@ -27,7 +27,8 @@ const sidebars = {
         'javascript/extends-static',
         'javascript/extends-fun',
         'javascript/set-property',
-        'javascript/reg-exp'
+        'javascript/reg-exp',
+        'javascript/implicit-conversion'
       ],
     },
     {
